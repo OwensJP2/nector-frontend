@@ -1,0 +1,535 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>nectar</title>
+<meta name="description" content="nectar: defensive cybersecurity evaluation data and expert review of AI agent runs.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+<script>document.documentElement.classList.add("js")</script>
+<style>
+:root{--bg:#0a0a0a;--ink:#d8d4cc;--dim:#7a746a;--faint:#3f3b35;--line:#1f1d1a;--ok:#f5b301;--accent:#ffd34d;--dir:#f5b301;--link:#e8c56a;--warn:#ff7a45;--err:#ef5b5b;--white:#faf8f3}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%;background:var(--bg);color:var(--ink);font:13.5px/1.6 "JetBrains Mono",ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
+a{color:inherit;text-decoration:none}
+pre{margin:0;font:inherit;white-space:pre}
+button,input,textarea{font:inherit;color:inherit}
+::selection{background:var(--ok);color:#000}
+
+.tmux{height:100vh;height:100dvh;display:grid;grid-template-rows:minmax(0,1fr) auto}
+.grid{display:grid;grid-template-columns:minmax(0,1.08fr) minmax(0,.92fr);grid-template-rows:minmax(0,.9fr) minmax(0,1.1fr);gap:1px;background:var(--line);min-height:0}
+.pane{background:var(--bg);display:flex;flex-direction:column;min-height:0;min-width:0}
+.ptitle{flex:none;display:flex;justify-content:space-between;padding:0 12px;border-bottom:1px solid var(--line);color:var(--faint);font-size:11.5px;line-height:22px;white-space:nowrap;overflow:hidden}
+.pane.active .ptitle{color:var(--ok);border-color:#f5b30166}
+.body{flex:1;overflow:auto;padding:clamp(14px,2vw,26px) clamp(16px,2.4vw,32px);scrollbar-width:thin;scrollbar-color:var(--line) transparent;container-type:inline-size}
+
+.p{color:var(--ok)}.h{color:var(--accent)}.d{color:var(--dim)}.w{color:var(--white)}.k{color:var(--ok)}.y{color:var(--warn)}.e{color:var(--err)}
+.prompt .u{color:var(--ok)}.prompt .pth{color:#b9b2a5}.prompt .sy{color:var(--dim)}.prompt .w{color:var(--white)}
+.js .boot{visibility:hidden}
+.typed::after{content:"";display:inline-block;width:.6em;height:1.15em;vertical-align:-.2em;background:var(--ink);margin-left:1px}
+.typed.done::after{display:none}
+.typed:not(.done)::after{visibility:visible !important}
+.cur{display:inline-block;width:.6em;height:1.15em;vertical-align:-.2em;background:var(--ink);animation:blink 1.05s steps(1) infinite}
+@keyframes blink{50%{opacity:0}}
+.pane:not(.active) .cur{visibility:hidden}
+.pane:not(.active) .hf.idle,.pane:not(.active) .field{animation:none}
+
+#p0 .body{display:flex;flex-direction:column}
+#p0 .out{display:flex;flex-direction:column;align-items:center;text-align:center}
+#p0 .out .sub{margin-inline:auto}
+#p2 .body{display:flex;flex-direction:column}
+#p2 #view{max-width:none}
+#view .md{margin:10px auto 4px;text-align:center;max-width:68ch}
+#view .md .list{display:inline-block;text-align:left;margin:0 auto}
+#view .md .acts{justify-content:center}
+#view .md .h2::before{content:"## "}
+/* 0: whoami — the logo is the hero */
+.lg{display:grid;width:max-content;margin:12px auto 20px;font-size:clamp(3px,calc(100cqi / 80 / .6),12px)}
+.lg .logo{grid-area:1/1;margin:0;line-height:.92;font-size:1em}
+.logo.sh{color:#3a2700;transform:translate(.45ch,.3em)}
+.logo.sh .drop{visibility:hidden}
+.logo.gd{background:linear-gradient(180deg,#fff3c4 0%,#ffd34d 26%,#f5b301 52%,#b87800 76%,#6e4500 100%);-webkit-background-clip:text;background-clip:text;color:transparent;filter:drop-shadow(0 0 16px #f5b30150)}
+.logo.gd .drop{display:inline-block;color:#d99400;-webkit-text-fill-color:#d99400;animation:drip 4.2s cubic-bezier(.55,0,.95,.55) infinite 2.4s}
+@keyframes drip{0%,58%{transform:translateY(0);opacity:1}88%{transform:translateY(2.4em);opacity:0}89%,94%{transform:translateY(0);opacity:0}100%{opacity:1}}
+.tag{color:var(--white);font-weight:700;font-size:clamp(15px,3cqi,22px);line-height:1.35;margin:0 0 8px}
+.sub{margin:0;max-width:58ch;color:var(--ink)}
+
+/* 1: ls */
+.ls{outline:none}
+.row{display:flex;white-space:pre;cursor:pointer;padding:1px 8px;margin:0 -8px;color:var(--dim)}
+.row .nm{color:var(--white);font-weight:700}
+.row .dirc{color:var(--dir)}.row .lnc{color:var(--link)}
+.row .tgt{color:var(--ink)}.row .tgt .ar{color:var(--dim)}
+.row .why{margin-left:auto;padding-left:16px;color:var(--dim);opacity:0;transition:opacity .12s;overflow:hidden;text-overflow:ellipsis}
+.row:hover{background:#1a1814}
+.row:hover .why,.row.sel .why{opacity:1}
+.row{border-left:2px solid transparent}
+.row.sel{background:#f5b30114;border-left-color:var(--ok)}
+.row.sel .nm{color:var(--ok)}
+.row.sel .why{color:var(--ok)}
+.row.static{cursor:default}.row.static:hover{background:none}
+.ls:focus-visible .row.sel{outline:1px dashed #f5b30166}
+.navnote{color:var(--dim);margin:2px 0 4px}
+.lshint{color:var(--dim);margin-top:12px}
+@container (max-width:700px){.og{display:none}}
+@container (max-width:470px){.meta{display:none}}
+@container (max-width:340px){.why{display:none}}
+
+/* 2: pwd + rendered README (glow-style) */
+#view{max-width:68ch}
+.md{margin:10px 0 4px}
+.md .h1{display:inline-block;background:var(--accent);color:#0a0a0a;font-weight:700;padding:0 8px;margin:4px 0 10px}
+.md .lead{color:var(--white);margin:0 0 12px}
+.md .h2{color:var(--ok);font-weight:700;margin:14px 0 4px}
+.md .h2::before{content:"## ";color:var(--faint)}
+.md p{margin:0 0 10px}
+.md .li{display:flex;gap:10px;padding-left:2px}
+.md .li .m{color:var(--ok);flex:none}
+.md .li .m.n{color:var(--accent)}
+.md code{color:var(--accent);background:#ffd34d12;padding:0 4px}
+.md b{color:var(--white)}
+.md .q{border-left:2px solid var(--faint);padding-left:12px;color:var(--dim);margin:6px 0 10px}
+.md .go{display:inline-block;margin-top:12px;padding:3px 10px;background:var(--ok);color:#000;font-weight:700;cursor:pointer}
+.md .go:hover{background:#ffe08a}
+.md .acts{margin-top:14px;display:flex;flex-wrap:wrap;gap:10px}
+.md .acts .go{margin-top:0}
+.md .go.ghost{background:none;color:var(--ok);border:1px solid var(--ok);padding:2px 9px}
+.md .go.ghost:hover{background:var(--ok);color:#000}
+.md .go.off{background:none;color:var(--warn);border:1px dashed var(--warn);cursor:default}
+
+/* 3: mail — a terminal form */
+.cta{width:max-content;background:linear-gradient(180deg,#fff3c4,#ffd34d 30%,#f5b301 60%,#a86c00);-webkit-background-clip:text;background-clip:text;color:transparent;line-height:1;font-size:clamp(4px,calc(100cqi / 60 / .6),11px);margin:14px 0 14px;filter:drop-shadow(0 0 14px #f5b30140)}
+.ask{color:var(--white);margin:0 0 14px}
+.hf{display:block;border-left:2px solid var(--faint);padding:2px 0 2px 12px;margin-bottom:10px}
+.hf:focus-within{border-left-color:var(--ok)}
+.hf.idle{animation:bar 1.05s steps(1) infinite;border-left-color:var(--ok)}
+@keyframes bar{50%{border-left-color:var(--faint)}}
+.hf .t{color:var(--white);font-weight:700}
+.hf:focus-within .t,.hf.idle .t{color:var(--ok)}
+.hf .ds{color:var(--dim)}
+.hf .in{display:flex;white-space:pre}
+.hf .in .gt{color:var(--ok)}
+.hf input,.hf textarea{flex:1;min-width:0;background:none;border:0;outline:none;padding:0;color:var(--white);caret-color:var(--ok);caret-shape:block;resize:none;line-height:1.6}
+.hf input::placeholder,.hf textarea::placeholder{color:var(--faint)}
+#notewrap{display:none}
+#notewrap.open{display:block}
+.keys{color:var(--dim);margin-top:4px}
+.keys b{color:var(--ink);font-weight:700}
+.keys .kb{cursor:pointer}
+.keys .kb:hover b{color:var(--ok)}
+.hdrs{color:var(--dim);margin-bottom:18px;white-space:pre}
+.field{position:relative;display:flex;align-items:center;gap:10px;border:1px solid var(--faint);padding:11px 14px;margin-bottom:12px}
+.field.idle{border-color:var(--ok);animation:pulse 2.2s ease-in-out infinite}
+.field:focus-within{border-color:var(--ok);box-shadow:0 0 0 3px #f5b30133;background:#f5b30110}
+@keyframes pulse{50%{box-shadow:0 0 0 4px #f5b30126}}
+.field .lbl{position:absolute;top:-.8em;left:10px;background:var(--bg);padding:0 6px;color:var(--ok);font-size:12px;line-height:1.4}
+.field .gt{color:var(--ok);font-weight:700}
+#from{flex:1;min-width:0;background:none;border:0;outline:none;padding:0;color:var(--white);caret-color:var(--ok);caret-shape:block;font-size:15px}
+#from::placeholder{color:var(--dim)}
+.send{flex:none;border:0;background:var(--ok);color:#000;font-weight:700;padding:5px 13px;cursor:pointer}
+.send:hover,.send:focus-visible{background:#ffe08a;outline:none}
+.hdrs .w{color:var(--ink)}
+#smtp{margin-top:12px;max-height:11em;overflow:auto;scrollbar-width:none;white-space:pre-wrap;word-break:break-word}
+#smtp .c{color:var(--faint)}#smtp .s{color:var(--dim)}
+#smtp .big{font-weight:700;margin-top:6px}
+#smtp .big.ok{color:var(--ok)}#smtp .big.y{color:var(--warn)}
+#smtp a{color:var(--ok);border-bottom:1px dashed var(--ok)}
+form[aria-busy="true"]{opacity:.5;pointer-events:none}
+
+/* status bar */
+.status{display:flex;align-items:center;background:var(--ok);color:#000;font-size:12.5px;line-height:23px;white-space:nowrap;overflow:hidden}
+.status span,.status a{padding:0 7px}
+.status .cw{font-weight:700}
+.status a:hover{background:#000;color:var(--ok)}
+.status .right{margin-left:auto;display:flex;padding:0}
+
+@media (max-width:860px){
+  .tmux{height:auto;min-height:100dvh}
+  .grid{grid-template-columns:1fr;grid-template-rows:auto;overflow-x:hidden}
+  .body{overflow:visible}
+  #p0 .body,#p3 .body{padding-block:28px}
+  .status{position:sticky;bottom:0;z-index:2}
+  .status .clock,.status .win2{display:none}
+  html,body{font-size:12.5px}
+  .body pre:not(.logo):not(.cta){white-space:pre-wrap;word-break:break-word}
+}
+@media (prefers-reduced-motion:reduce){.logo.gd .drop{animation:none}.rv{animation:none;opacity:1}.cur,.field{animation:none}}
+</style>
+</head>
+<body>
+<div class="tmux">
+  <div class="grid">
+
+    <section class="pane" id="p0" aria-label="Who we are">
+      <div class="ptitle"><span>0: whoami</span><span>nectar</span></div>
+      <div class="body">
+<pre class="prompt"><span class="u">root@nectar</span><span class="sy">:</span><span class="pth">~</span><span class="sy">$</span> <span class="w typed" data-cmd="whoami"></span></pre>
+<div class="out">
+<h1 class="boot" style="margin:0;font:inherit"><div class="lg" role="img" aria-label="nectar"><pre class="logo sh" aria-hidden="true">   ▗███▌   ▗██▛     ▄██████▛     ▄██████▛ ▗██████████▛     ▄███         ▄██▌
+   ████▙   ███   ▗▟████████   ▗▟████████  ███████████     ▟███▙      ▗▟█████▄
+  ▗█████▌ ▗██▛ ▗▄█▛         ▗▄█▛             ▗██▛        ▄█████    ▗▄█▛    ▗█▙
+  ███▜██▙ ███  █████████    ███              ███        ▟██▀██▙    ███████████
+ ▗██▛ ███▙██▛ ▗████████▛   ▗██▛             ▗██▛       ▄██▀ ███   ▗██████████▛
+ ███  ▜█████  ███          ▀██              ███       ▟███████▙   ███ ▀██▙▖
+▗██▛   ████▛ ▗██████████▛   ▝████████▛     ▗██▛      ▄██▀▀▀▀███  ▗██▛  ▝███▖
+███    ▜███  ███████████     ▝███████      ███      ▟██▘   ▝██▙  ███    ▀██▙
+                    ██        ▐█▌                                ▐█▌
+                    █▌        ▐█                                 ▐▛
+                    █         ▐█                                 ▝▘
+                              ▐█
+                              ▐▌
+                              <span class="drop">▗</span><span class="drop">▄</span>
+                              <span class="drop">▐</span><span class="drop">█</span></pre><pre class="logo gd" aria-hidden="true">   ▗███▌   ▗██▛     ▄██████▛     ▄██████▛ ▗██████████▛     ▄███         ▄██▌
+   ████▙   ███   ▗▟████████   ▗▟████████  ███████████     ▟███▙      ▗▟█████▄
+  ▗█████▌ ▗██▛ ▗▄█▛         ▗▄█▛             ▗██▛        ▄█████    ▗▄█▛    ▗█▙
+  ███▜██▙ ███  █████████    ███              ███        ▟██▀██▙    ███████████
+ ▗██▛ ███▙██▛ ▗████████▛   ▗██▛             ▗██▛       ▄██▀ ███   ▗██████████▛
+ ███  ▜█████  ███          ▀██              ███       ▟███████▙   ███ ▀██▙▖
+▗██▛   ████▛ ▗██████████▛   ▝████████▛     ▗██▛      ▄██▀▀▀▀███  ▗██▛  ▝███▖
+███    ▜███  ███████████     ▝███████      ███      ▟██▘   ▝██▙  ███    ▀██▙
+                    ██        ▐█▌                                ▐█▌
+                    █▌        ▐█                                 ▐▛
+                    █         ▐█                                 ▝▘
+                              ▐█
+                              ▐▌
+                              <span class="drop">▗</span><span class="drop">▄</span>
+                              <span class="drop">▐</span><span class="drop">█</span></pre></div></h1>
+<p class="tag boot">Defensive cybersecurity evals for AI agents.</p>
+<p class="sub boot">We build the test data, then check whether your agent's conclusions hold up against the evidence.</p>
+</div>
+<pre class="boot" style="margin-top:16px"><span class="prompt"><span class="u">root@nectar</span><span class="sy">:</span><span class="pth">~</span><span class="sy">$</span> </span><span class="cur"></span></pre>
+      </div>
+    </section>
+
+    <section class="pane" id="p1" aria-label="Site directory">
+      <div class="ptitle"><span>1: nav directory</span><span>/srv/hive</span></div>
+      <div class="body">
+<pre class="prompt"><span class="u">root@nectar</span><span class="sy">:</span><span class="pth">/srv/hive</span><span class="sy">$</span> <span class="w typed" data-cmd="ls -la"></span></pre>
+<div class="navnote boot"># nav directory: pick a section</div>
+<div class="ls" id="ls" role="listbox" tabindex="0" aria-label="Site sections"></div>
+<div class="lshint boot">↑ ↓ / j k to browse · enter to open</div>
+      </div>
+    </section>
+
+    <section class="pane" id="p2" aria-label="Section details">
+      <div class="ptitle"><span>2: pwd</span><span id="cwd2">/srv/hive/about</span></div>
+      <div class="body"><div id="view" aria-live="polite"></div></div>
+    </section>
+
+    <section class="pane active" id="p3" aria-label="Email us">
+      <div class="ptitle"><span>3: mail</span><span>smtp.nectar.example:587</span></div>
+      <div class="body">
+<pre class="prompt"><span class="u">root@nectar</span><span class="sy">:</span><span class="pth">~</span><span class="sy">$</span> <span class="w typed" data-cmd="./contact"></span></pre>
+<pre class="cta boot" aria-hidden="true">███████╗███╗   ███╗ █████╗ ██╗██╗        ██╗   ██╗███████╗
+██╔════╝████╗ ████║██╔══██╗██║██║        ██║   ██║██╔════╝
+█████╗  ██╔████╔██║███████║██║██║        ██║   ██║███████╗
+██╔══╝  ██║╚██╔╝██║██╔══██║██║██║        ██║   ██║╚════██║
+███████╗██║ ╚═╝ ██║██║  ██║██║███████╗   ╚██████╔╝███████║
+╚══════╝╚═╝     ╚═╝╚═╝  ╚═╝╚═╝╚══════╝    ╚═════╝ ╚══════╝</pre>
+<p class="ask boot">Tell us what you're evaluating. We'll take it from there.</p>
+<form id="mail" class="boot" novalidate>
+<div class="hdrs"><span>To:</span>      <span class="w">root@nectar.example</span>
+<span>Subject:</span> <span class="w" id="subjShow">nectar pilot</span></div>
+<label class="field" id="hfFrom">
+  <span class="lbl">your email</span>
+  <span class="gt" aria-hidden="true">&gt;</span>
+  <input id="from" type="email" name="email" placeholder="you@company.com" autocomplete="email" required aria-label="Your email">
+  <button class="send" type="submit">⏎ send</button>
+</label>
+<label class="hf" id="notewrap">
+  <div class="t">Note <span class="ds" style="font-weight:400">(optional)</span></div>
+  <div class="in"><span class="gt">&gt; </span><textarea id="msg" name="message" rows="2" placeholder="what are you evaluating?" aria-label="Note"></textarea></div>
+</label>
+<input type="hidden" id="subj" value="nectar pilot">
+<div class="keys"><span class="kb" id="kSend"><b>enter</b> send</span> <span class="d">•</span> <span class="kb" id="kNote"><b>tab</b> add a note</span> <span class="d">•</span> <span class="kb" id="kEsc"><b>esc</b> clear</span></div>
+</form>
+<div id="smtp" aria-live="polite"></div>
+      </div>
+    </section>
+
+  </div>
+  <footer class="status">
+    <span>[nectar] 🍯</span>
+    <span class="cw">0:hive*</span>
+    <a class="win2" href="#demo" id="demoWin">1:demo-</a>
+    <span class="right"><span>"made by 🇺🇸"</span><span class="clock" id="clock"></span></span>
+  </footer>
+</div>
+<script>
+(() => {
+// ---- config -------------------------------------------------------------
+const DEMO_URL = "";       // hosted Gradio app, e.g. https://huggingface.co/spaces/...
+const SEND_ENDPOINT = "";  // POST {from, subject, message} -> 2xx only when the email was actually sent
+const TO = "root@nectar.example";
+
+const $ = s => document.querySelector(s);
+const esc = s => String(s).replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
+const narrow = () => matchMedia("(max-width:860px)").matches;
+const sleep = ms => new Promise(r => setTimeout(r, reduce ? 0 : ms));
+const show = el => { if (el) el.style.visibility = "visible"; };
+
+const clock = $("#clock");
+const tick = () => { const d = new Date(); clock.textContent = d.toTimeString().slice(0,5) + " " + d.toLocaleDateString("en-GB",{day:"2-digit",month:"short",year:"2-digit"}).replace(/ /g,"-"); };
+tick(); setInterval(tick, 15000);
+function activate(n){ for (let i = 0; i < 4; i++) $("#p" + i).classList.toggle("active", i === n); }
+[1,3].forEach(i => $("#p" + i).addEventListener("pointerdown", () => activate(i)));
+
+async function type(el, text, speed = 38){
+  el.classList.remove("done"); el.textContent = "";
+  for (let k = 1; k <= text.length; k++) { el.textContent = text.slice(0, k); await sleep(speed + Math.random() * 30); }
+  await sleep(120); el.classList.add("done");
+}
+
+// ---- READMEs (markdown, rendered glow-style) -----------------------------
+const docs = {
+about: `# nectar
+> Defensive cybersecurity evals for AI agents.
+Security teams are handing investigations to agents. We test whether those agents reach conclusions the evidence actually supports, and we build the data to keep testing as models change.
+## what we do
+1. **blueprint**: evaluation datasets
+2. **trace-review**: independent review of agent runs
+3. **scenarios**: cases built around your workflow
+## how we work
+- defensive work only
+- built and run in the usa 🇺🇸
+{{open:blueprint|start with blueprint}} {{mail:nectar pilot|email us}}`,
+
+blueprint: `# blueprint
+> Evaluation datasets for defensive security agents.
+## what you get
+- cases generalized from real network data
+- observable evidence behind every case
+- expert-reviewed reference answers
+- a rubric your team can rerun
+## how it's used
+1. run your agent against the cases
+2. score each run with the rubric
+3. rerun on every new model version and compare
+## good fit if
+you ship a security agent and need to know whether the next version is actually better.
+{{mail:blueprint sample|ask for a sample set}}`,
+
+"trace-review": `# trace-review
+> An independent review of the decisions behind your agent's answer.
+## what we look for
+- claims the evidence doesn't support
+- evidence the agent missed
+- cases that need expert judgment
+## example
+| agent closed a sign-in alert as **routine**. the device match is real, but no one confirmed the user started the session.
+| verdict: \`needs review\`. the conclusion goes beyond the evidence.
+## how it works
+1. send us agent runs: the trace and the final answer
+2. we check every conclusion against the evidence
+3. you get back what holds up, what doesn't, and what would settle it
+{{mail:trace review|send us a trace}} {{open:demo|try the demo}}`,
+
+scenarios: `# scenarios
+> Cases commissioned around the workflow you care about.
+## workflows
+- alert triage
+- incident reconstruction
+- evidence-based reporting
+## how it works
+1. tell us the workflow and where your grader falls short
+2. we build cases with observable evidence and reference answers
+3. you run them like any blueprint set
+{{mail:custom scenario|commission a scenario}}`,
+
+demo: `# demo
+> Review a sample agent run yourself. It's a Gradio app.
+## try it
+1. pick a fictional case
+2. read the evidence, choose a disposition
+3. cite the events that decide it
+4. get graded against the reference
+{{demo}}`,
+
+"contact.eml": `# contact
+> root@nectar.example
+Tell us what you're evaluating and where your current grader falls short.
+{{mail:nectar pilot|write it in the mail pane}}`,
+};
+
+const inline = s => esc(s).replace(/`([^`]+)`/g, "<code>$1</code>").replace(/\*\*([^*]+)\*\*/g, "<b>$1</b>");
+const action = tok => tok.replace(/\{\{(\w+)(?::([^|}]*))?(?:\|([^}]*))?\}\}/g, (_, kind, arg, label) => {
+  if (kind === "demo") return DEMO_URL
+    ? `<a class="go" href="${esc(DEMO_URL)}" target="_blank" rel="noopener">⏎ launch trace-review</a>`
+    : `<span class="go off">status: deploying</span> <a class="go ghost" data-mail="demo walkthrough" href="#p3">⏎ ask for a walkthrough</a>`;
+  if (kind === "mail") return `<a class="go" data-mail="${esc(arg)}" href="#p3">⏎ ${esc(label)}</a>`;
+  if (kind === "open") return `<a class="go ghost" data-open="${esc(arg)}" href="#${esc(arg)}">→ ${esc(label)}</a>`;
+  return "";
+});
+function md(src){
+  let h = "";
+  for (const raw of src.split("\n")) {
+    const l = raw.trimEnd();
+    if (l.startsWith("{{")) h += `<div class="acts">${action(l)}</div>`;
+    else if (l.startsWith("# ")) h += `<div class="h1">${inline(l.slice(2))}</div>`;
+    else if (l.startsWith("## ")) h += `<div class="h2">${inline(l.slice(3))}</div>`;
+    else if (l.startsWith("> ")) h += `<p class="lead">${inline(l.slice(2))}</p>`;
+    else if (l.startsWith("| ")) h += `<div class="q">${inline(l.slice(2))}</div>`;
+    else if (l.startsWith("- ")) h += `<div class="li"><span class="m">•</span><span>${inline(l.slice(2))}</span></div>`;
+    else if (/^\d+\. /.test(l)) { const [n, ...r] = l.split(". "); h += `<div class="li"><span class="m n">${n}.</span><span>${inline(r.join(". "))}</span></div>`; }
+    else if (l) h += `<p>${inline(l)}</p>`;
+  }
+  h = h.replace(/((?:<div class="li">.*?<\/span><\/div>)+)/g, '<div class="list">$1</div>').replace(/((?:<div class="q">.*?<\/div>)+)/g, '<div class="list">$1</div>');
+  return `<div class="md">${h}</div>`;
+}
+
+// ---- ls -----------------------------------------------------------------
+const entries = [
+  { name: "about",        kind: "d", why: "who we are" },
+  { name: "blueprint",    kind: "d", why: "eval datasets" },
+  { name: "trace-review", kind: "d", why: "agent run review" },
+  { name: "scenarios",    kind: "d", why: "custom cases" },
+  { name: "demo",         kind: "l", why: "try it live", target: "gradio/trace-review" },
+  { name: "contact.eml",  kind: "f", why: "email us" },
+];
+const stamp = (() => { const d = new Date(); return d.toLocaleDateString("en-US",{month:"short"}) + " " + String(d.getDate()).padStart(2) + " " + d.toTimeString().slice(0,5); })();
+const meta = (k, size) => `<span class="meta">${k === "d" ? "drwxr-xr-x 2" : k === "l" ? "lrwxrwxrwx 1" : "-rw-r--r-- 1"} <span class="og">root nectar </span>${String(size).padStart(4)} ${stamp} </span>`;
+const ls = $("#ls");
+ls.innerHTML =
+  `<div class="row static boot"><span class="meta">total 24</span></div>` +
+  `<div class="row static boot">${meta("d",4096)}<span class="nm dirc">.</span></div>` +
+  `<div class="row static boot">${meta("d",4096)}<span class="nm dirc">..</span></div>` +
+  entries.map((e, i) => {
+    const nm = e.kind === "d" ? `<span class="nm dirc">${e.name}/</span>` : e.kind === "l" ? `<span class="nm lnc">${e.name}</span><span class="tgt"> <span class="ar">-&gt;</span> ${e.target}</span>` : `<span class="nm">${e.name}</span>`;
+    return `<div class="row boot" role="option" data-i="${i}">${meta(e.kind, e.kind === "d" ? 4096 : e.kind === "l" ? 19 : 412)}${nm}<span class="why"># ${e.why}</span></div>`;
+  }).join("");
+const rows = [...ls.querySelectorAll(".row[data-i]")];
+const idx = name => entries.findIndex(e => e.name === name);
+
+// ---- pane 2 -------------------------------------------------------------
+const view = $("#view");
+let sel = -1, token = 0;
+const P = dir => `<span class="prompt"><span class="u">root@nectar</span><span class="sy">:</span><span class="pth">${esc(dir)}</span><span class="sy">$</span> </span>`;
+async function open(i){
+  if (i < 0 || i >= entries.length) return;
+  sel = i; rows.forEach((r, j) => { r.classList.toggle("sel", j === i); r.setAttribute("aria-selected", j === i); });
+  const e = entries[i], t = ++token, base = "/srv/hive";
+  const dir = e.kind === "d" ? `${base}/${e.name}` : base;
+  $("#cwd2").textContent = dir;
+  const cmd = e.kind === "d" ? `cd ${e.name} && glow README.md` : e.kind === "l" ? `glow ${e.name}/README.md` : `glow ${e.name}`;
+  view.innerHTML = `<div>${P(base)}<span class="w typed"></span></div>`;
+  const w = view.querySelector(".typed");
+  w.classList.remove("done");
+  for (let k = 1; k <= cmd.length; k++) { if (t !== token) return; w.textContent = cmd.slice(0, k); await sleep(14); }
+  await sleep(90); if (t !== token) return;
+  w.classList.add("done");
+  const wrap = document.createElement("div");
+  wrap.innerHTML = md(docs[e.name]);
+  const blocks = [...wrap.firstChild.children];
+  blocks.forEach(b => b.style.visibility = "hidden");
+  view.appendChild(wrap.firstChild);
+  for (const b of blocks) { if (t !== token) return; b.style.visibility = "visible"; await sleep(16); }
+  view.insertAdjacentHTML("beforeend", `<div style="margin-top:14px">${P(dir)}<span class="cur"></span></div>`);
+}
+rows.forEach((r, i) => r.addEventListener("click", () => {
+  activate(1); ls.focus({preventScroll: true}); open(i);
+  if (entries[i].kind === "f") goMail("nectar pilot");
+  else if (narrow()) $("#p2").scrollIntoView({behavior: reduce ? "auto" : "smooth", block: "start"});
+}));
+ls.addEventListener("keydown", ev => {
+  const k = ev.key;
+  if (k === "ArrowDown" || k === "j") { ev.preventDefault(); open(Math.min(entries.length - 1, sel + 1)); }
+  else if (k === "ArrowUp" || k === "k") { ev.preventDefault(); open(Math.max(0, sel - 1)); }
+  else if (k === "Enter") { ev.preventDefault(); const e = entries[sel]; if (e.kind === "f") goMail("nectar pilot"); else if (e.kind === "l" && DEMO_URL) window.open(DEMO_URL, "_blank", "noopener"); }
+});
+ls.addEventListener("focus", () => activate(1));
+view.addEventListener("click", ev => {
+  const m = ev.target.closest("[data-mail]"), o = ev.target.closest("[data-open]");
+  if (m) { ev.preventDefault(); goMail(m.dataset.mail); }
+  else if (o) { ev.preventDefault(); activate(1); ls.focus({preventScroll: true}); open(idx(o.dataset.open)); }
+});
+$("#demoWin").addEventListener("click", ev => { ev.preventDefault(); activate(1); ls.focus({preventScroll: true}); open(idx("demo")); });
+
+// ---- pane 3: mail (a terminal form) -------------------------------------
+const form = $("#mail"), from = $("#from"), subj = $("#subj"), msg = $("#msg"), smtp = $("#smtp"), hf = $("#hfFrom");
+const idle = () => hf.classList.toggle("idle", !from.value && document.activeElement !== from);
+from.addEventListener("focus", idle); from.addEventListener("blur", idle); from.addEventListener("input", idle);
+function setSubject(s){ if (s) { subj.value = s; $("#subjShow").textContent = s; } }
+function goMail(subject){
+  setSubject(subject); activate(3);
+  if (narrow()) $("#p3").scrollIntoView({behavior: reduce ? "auto" : "smooth", block: "start"});
+  from.focus({preventScroll: !narrow()});
+}
+const toggleNote = () => { const o = $("#notewrap").classList.toggle("open"); if (o) msg.focus(); else from.focus(); };
+$("#kNote").addEventListener("click", toggleNote);
+$("#kSend").addEventListener("click", () => send());
+$("#kEsc").addEventListener("click", () => clearForm());
+from.addEventListener("keydown", ev => { if (ev.key === "Tab" && !ev.shiftKey && !$("#notewrap").classList.contains("open")) { ev.preventDefault(); toggleNote(); } });
+function clearForm(){ from.value = ""; msg.value = ""; smtp.innerHTML = ""; $("#notewrap").classList.remove("open"); from.focus(); idle(); }
+
+const out = (text, cls) => { const d = document.createElement("div"); d.className = cls; d.textContent = text; smtp.appendChild(d); smtp.scrollTop = smtp.scrollHeight; return d; };
+const valid = v => /^[^\s@<>()]+@[^\s@<>()]+\.[a-z]{2,}$/i.test(v);
+let busy = false;
+async function send(){
+  if (busy) return;
+  const f = from.value.trim(), s = subj.value.trim() || "nectar pilot", m = msg.value.trim();
+  smtp.innerHTML = "";
+  if (!valid(f)) { out(`550 5.1.3 <${f || "empty"}>: that doesn't look like an email address`, "big y"); from.focus(); return; }
+  busy = true; form.setAttribute("aria-busy", "true"); activate(3);
+  const req = SEND_ENDPOINT
+    ? fetch(SEND_ENDPOINT, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ from: f, subject: s, message: m }) }).then(r => r.ok).catch(() => false)
+    : Promise.resolve(null);
+  const script = [
+    ["c", "connecting to smtp.nectar.example:587 ..."], ["s", "220 smtp.nectar.example ESMTP ready"],
+    ["c", `EHLO ${f.split("@")[1]}`], ["s", "250 STARTTLS"],
+    ["c", `MAIL FROM:<${f}>`], ["s", "250 2.1.0 sender ok"],
+    ["c", `RCPT TO:<${TO}>`], ["s", "250 2.1.5 recipient ok"],
+    ["c", "DATA"], ["s", "354 go ahead"], ["c", `Subject: ${s}`], ["c", "."],
+  ];
+  for (const [c, t] of script) { out((c === "c" ? "> " : "< ") + t, c); await sleep(c === "c" ? 110 : 150); }
+  const ok = await req;
+  if (ok === true) {
+    out(`< 250 2.0.0 queued as ${Math.random().toString(16).slice(2, 8).toUpperCase()}`, "s");
+    await sleep(140); out("> QUIT", "c"); await sleep(100); out("< 221 2.0.0 bye", "s"); await sleep(180);
+    out(`✓ sent. thank you, we'll reply to ${f}.`, "big ok");
+    from.value = ""; msg.value = "";
+  } else {
+    out(`< 451 relay offline${ok === null ? " in this preview" : ""}. nothing was sent.`, "s");
+    const href = `mailto:${TO}?subject=${encodeURIComponent(s)}&body=${encodeURIComponent((m ? m + "\n\n" : "") + "-- " + f)}`;
+    const d = out("", "big y");
+    d.innerHTML = `→ <a href="${esc(href)}">send it from your mail app instead</a>`;
+    try { location.href = href; } catch (_) {}
+  }
+  busy = false; form.removeAttribute("aria-busy"); idle();
+  smtp.scrollIntoView({block: "nearest"});
+}
+form.addEventListener("submit", ev => { ev.preventDefault(); send(); });
+from.addEventListener("keydown", ev => { if (ev.key === "Enter") { ev.preventDefault(); send(); } });
+msg.addEventListener("keydown", ev => { if (ev.key === "Enter" && !ev.shiftKey) { ev.preventDefault(); send(); } });
+form.addEventListener("keydown", ev => { if (ev.key === "Escape") clearForm(); });
+[from, msg].forEach(el => el.addEventListener("focus", () => activate(3)));
+
+// ---- boot: every pane runs its own command, like a tmux session coming up --
+const panes = [...document.querySelectorAll(".pane")];
+async function bootPane(pane, delay){
+  await sleep(delay);
+  const cmd = pane.querySelector(".typed[data-cmd]");
+  if (cmd) await type(cmd, cmd.dataset.cmd);
+  for (const el of pane.querySelectorAll(".boot")) { show(el); await sleep(el.classList.contains("row") ? 45 : 70); }
+}
+(async () => {
+  if (reduce) {
+    document.querySelectorAll(".typed[data-cmd]").forEach(el => { el.textContent = el.dataset.cmd; el.classList.add("done"); });
+    document.querySelectorAll(".boot").forEach(show);
+    open(0); idle(); return;
+  }
+  await Promise.all([
+    bootPane(panes[0], 150),
+    bootPane(panes[1], 450),
+    sleep(800).then(() => open(0)),
+    bootPane(panes[3], 1050),
+  ]);
+  idle();
+  activate(3);
+  if (!narrow()) { from.focus({preventScroll: true}); }
+})();
+})();
+</script>
+</body>
+</html>
